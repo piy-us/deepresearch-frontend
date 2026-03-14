@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --bg:              #0c0c0c;
+  --panel:           #111111;
+  --border:          #1e1e1e;
+  --msg-ai:          #161616;
+  --msg-ai-border:   #222222;
+  --msg-user:        #1c1c1c;
+  --msg-user-border: #282828;
+  --input-bg:        #161616;
+  --text:            #b0b0b0;
+  --text-dim:        #555555;
+  --text-dimmer:     #3a3a3a;
+  --text-bright:     #d0d0d0;
+  --label:           #3e3e3e;
+}
+
+html, body, #__next { height: 100%; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Thin scrollbars ─────────────────────── */
+* { scrollbar-width: thin; scrollbar-color: #252525 transparent; }
+*::-webkit-scrollbar { width: 4px; height: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #252525; border-radius: 4px; }
+
+/* ── Loading dots animation ──────────────── */
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.2; transform: scale(0.85); }
+  50%       { opacity: 1;   transform: scale(1);    }
+}
+
+/* ── Chip hover ──────────────────────────── */
+.action-chip:hover { background: #222222 !important; border-color: #383838 !important; color: #cccccc !important; }
+
+/* ── Markdown in chat ────────────────────── */
+.chat-prose { font-size: 0.84rem; line-height: 1.6; color: var(--text); }
+.chat-prose p  { margin: 0 0 4px; }
+.chat-prose ul { margin: 4px 0 4px 18px; padding: 0; list-style: disc; }
+.chat-prose ol { margin: 4px 0 4px 18px; padding: 0; list-style: decimal; }
+.chat-prose li { margin-bottom: 2px; }
+.chat-prose strong { color: #c8c8c8; font-weight: 600; }
+.chat-prose code {
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8em;
+  color: #a8c8a8;
+}
+
+/* ── Report markdown ─────────────────────── */
+.report-prose { font-size: 0.875rem; line-height: 1.85; color: #a0a0a0; }
+.report-prose h1 {
+  color: #dddddd;
+  font-size: 1.22rem;
+  font-weight: 600;
+  border-bottom: 1px solid #1e1e1e;
+  padding-bottom: 8px;
+  margin: 0 0 16px;
+}
+.report-prose h2 { color: #c8c8c8; font-size: 1.0rem; font-weight: 600; margin-top: 20px; }
+.report-prose h3 { color: #aaaaaa; font-size: 0.9rem; font-weight: 600; margin-top: 14px; }
+.report-prose table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: 12px 0; }
+.report-prose th {
+  background: #161616;
+  color: #888;
+  padding: 7px 12px;
+  text-align: left;
+  border: 1px solid #222;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+.report-prose td { padding: 7px 12px; border: 1px solid #1e1e1e; color: #999; vertical-align: top; }
+.report-prose tr:nth-child(even) td { background: #111; }
+.report-prose a { color: #6a9fd8; text-decoration: none; }
+.report-prose a:hover { text-decoration: underline; }
+.report-prose code {
+  background: #161616;
+  border: 1px solid #2a2a2a;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.82em;
+  color: #a8c8a8;
+}
+.report-prose pre {
+  background: #0f0f0f;
+  border: 1px solid #1e1e1e;
+  border-radius: 6px;
+  padding: 14px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+.report-prose pre code { background: none; border: none; padding: 0; }
+.report-prose blockquote {
+  border-left: 2px solid #2a2a2a;
+  margin: 0;
+  padding-left: 14px;
+  color: #666;
+}
+.report-prose hr { border: none; border-top: 1px solid #1e1e1e; margin: 20px 0; }
