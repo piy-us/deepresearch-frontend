@@ -1,175 +1,166 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import ChatSidebar, { ChatMessage, ConfigState } from "@/components/ChatSidebar";
-import ReportPane from "@/components/ReportPane";
-import ResizableShell from "@/components/ResizableShell";
-import { generateFollowups, runResearch } from "@/lib/api";
+import { useState, useCallback, useRef, useEffect } from "react";
+import TopBar from "@/components/TopBar";
+import ContactsSidebar from "@/components/ContactsSidebar";
+import ChatPane from "@/components/ChatPane";
+import { useStorage } from "@/lib/useStorage";
+import { callBackend, clearBackendHistory, CHIP_PROMPTS } from "@/lib/api";
+import type { Contact, ChatMessage } from "@/lib/types";
 
-type Phase = "need_query" | "need_action" | "asking_followups" | "completed";
+const WELCOME_CHIPS: ChatMessage["chips"] = [
+  { label: "Too many tools",       action: "pain_tools"    },
+  { label: "Security concerns",    action: "pain_security" },
+  { label: "Slow deployments",     action: "pain_cicd"     },
+  { label: "Asking about pricing", action: "pain_pricing"  },
+];
+
+const SIDEBAR_MIN = 200;
+const SIDEBAR_MAX = 480;
+const SIDEBAR_DEFAULT = 280;
 
 export default function Page() {
-  const [phase, setPhase] = useState<Phase>("need_query");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "assistant", content: "Hi! What topic would you like to research today?" },
-  ]);
-
-  const [cfg, setCfg] = useState<ConfigState>({
-    llm_provider: "gemini",
-    breadth: 4,
-    depth: 2,
-    llm_api_key: "",
-    firecrawl_api_key: "",
-  });
-
-  const [query, setQuery] = useState("");
-  const [followups, setFollowups] = useState<string[]>([]);
-  const [followupAnswers, setFollowupAnswers] = useState<string[]>([]);
-  const [answersCollected, setAnswersCollected] = useState(0);
+  const { contacts, setContacts, histories, setHistories, ready } = useStorage();
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any | null>(null);
 
-  const agentConfig = useMemo(() => ({
-    breadth: cfg.breadth,
-    depth: cfg.depth,
-    llm_provider: cfg.llm_provider,
-    llm_api_key: cfg.llm_api_key || undefined,
-    firecrawl_api_key: cfg.firecrawl_api_key || undefined,
-  }), [cfg]);
+  // Resizable sidebar
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const startW = useRef(SIDEBAR_DEFAULT);
 
-  function push(role: "user" | "assistant", content: string, chips?: ChatMessage["chips"]) {
-    setMessages((m) => [...m, { role, content, chips }]);
-  }
-
-  function validateKeys(): boolean {
-    if (!cfg.llm_api_key || !cfg.firecrawl_api_key) {
-      push("assistant", "⚠️ **Missing API Keys!** Please open *Configuration & API Keys* in the panel and enter your keys.");
-      return false;
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!dragging.current) return;
+      const delta = e.clientX - startX.current;
+      const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startW.current + delta));
+      setSidebarWidth(next);
     }
-    return true;
+    function onMouseUp() {
+      if (dragging.current) {
+        dragging.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        document.querySelector(".resize-handle")?.classList.remove("dragging");
+      }
+    }
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
+  function startDrag(e: React.MouseEvent) {
+    dragging.current = true;
+    startX.current = e.clientX;
+    startW.current = sidebarWidth;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    (e.currentTarget as HTMLDivElement).classList.add("dragging");
   }
 
-  async function handleGenerate() {
-    if (!query) { push("assistant", "Please enter a research topic first."); return; }
-    if (!validateKeys()) return;
+  const activeContact: Contact | null = contacts.find((c) => c.id === activeId) ?? null;
+  // UI display history — frontend keeps this for rendering only
+  const activeMessages: ChatMessage[] = activeId ? (histories[activeId] ?? []) : [];
+
+  const pushMessage = useCallback(
+    (role: "user" | "assistant", content: string, chips?: ChatMessage["chips"]) => {
+      setHistories((prev) => {
+        if (!activeId) return prev;
+        const existing = prev[activeId] ?? [];
+        return { ...prev, [activeId]: [...existing, { role, content, chips }] };
+      });
+    },
+    [activeId, setHistories]
+  );
+
+  function welcomeMessage(name: string): ChatMessage {
+    return {
+      role: "assistant",
+      content: `Hi! I'm your GitLab sales assistant for **${name}**. Tell me about them — what industry are they in, or what brought them to this call?`,
+      chips: WELCOME_CHIPS,
+    };
+  }
+
+  function handleSelect(id: string) {
+    setActiveId(id);
+    if (!(histories[id] ?? []).length) {
+      const c = contacts.find((x) => x.id === id);
+      if (!c) return;
+      setHistories((prev) => ({ ...prev, [id]: [welcomeMessage(c.name)] }));
+    }
+  }
+
+  function handleAdd(name: string) {
+    const id = Date.now().toString();
+    setContacts([{ id, name }, ...contacts]);
+    setActiveId(id);
+    setHistories((prev) => ({ ...prev, [id]: [welcomeMessage(name)] }));
+  }
+
+  async function handleDelete(id: string) {
+    setContacts(contacts.filter((c) => c.id !== id));
+    setHistories((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    if (activeId === id) setActiveId(null);
+    // Tell the backend to drop this contact's history too
+    await clearBackendHistory(id).catch(() => {});
+  }
+
+  async function handleSend(text: string) {
+    if (!activeId || !activeContact || loading) return;
+    pushMessage("user", text);
     setLoading(true);
     try {
-      const { questions } = await generateFollowups(query, agentConfig);
-      const qs = (questions || []).slice(0, 3);
-      setFollowups(qs);
-      setFollowupAnswers([]);
-      setAnswersCollected(0);
-      if (qs.length) {
-        setPhase("asking_followups");
-        push("assistant", `I have ${qs.length} follow-up question${qs.length > 1 ? "s" : ""}. Here's the first:\n\n**1.** ${qs[0]}`);
-      } else {
-        await handleRun(true);
-      }
+      // No history sent — backend owns that now
+      const reply = await callBackend(activeContact.id, activeContact.name, text);
+      pushMessage("assistant", reply);
     } catch (e: any) {
-      push("assistant", `⚠️ Error generating follow-ups:\n\n${e.message}`);
+      pushMessage("assistant", `⚠️ ${e.message}`);
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleRun(skipValidation = false) {
-    if (!query) { push("assistant", "Please enter a research topic first."); return; }
-    if (!skipValidation && !validateKeys()) return;
-    setLoading(true);
-    try {
-      push("assistant", "Running deep research… this may take a few minutes. ☕");
-      const res = await runResearch(query, followupAnswers, agentConfig);
-      setResult(res.result);
-      setPhase("completed");
-      push("assistant", "✅ Research complete! The full report is on the right →");
-    } catch (e: any) {
-      push("assistant", `⚠️ Error running research:\n\n${e.message}`);
-    } finally {
-      setLoading(false);
-    }
+  async function handleChip(action: string) {
+    const prompt = CHIP_PROMPTS[action];
+    if (prompt) await handleSend(prompt);
   }
 
-  async function onUserSend(text: string) {
-    const t = text.trim();
-    if (!t) return;
-    push("user", t);
-
-    if (phase === "need_query") {
-      setQuery(t);
-      setPhase("need_action");
-      push("assistant", "Got it! How would you like to proceed?", [
-        { label: "✦ Generate follow-ups", action: "generate" },
-        { label: "▶ Run research now",    action: "run"      },
-      ]);
-      return;
-    }
-
-    if (phase === "need_action") {
-      const lower = t.toLowerCase();
-      if (["generate", "followups", "follow-ups"].includes(lower)) { await handleGenerate(); }
-      else if (["run", "start", "research"].includes(lower))       { await handleRun(); }
-      else {
-        push("assistant", "Please type **generate** or **run**, or tap one of the buttons above.", [
-          { label: "✦ Generate follow-ups", action: "generate" },
-          { label: "▶ Run research now",    action: "run"      },
-        ]);
-      }
-      return;
-    }
-
-    if (phase === "asking_followups") {
-      if (["run", "start", "research"].includes(t.toLowerCase())) { await handleRun(); return; }
-      const currentQ = followups[answersCollected];
-      setFollowupAnswers((a) => [...a, `${currentQ}\nAnswer: ${t}`]);
-      const next = answersCollected + 1;
-      setAnswersCollected(next);
-      if (next < followups.length) {
-        push("assistant", `**${next + 1}.** ${followups[next]}`);
-      } else {
-        push("assistant", "Thanks! Starting research with your answers…");
-        await handleRun(true);
-      }
-      return;
-    }
-
-    if (phase === "completed") {
-      push("assistant", "Research is already complete. Refresh the page to start a new query.");
-    }
-  }
-
-  async function onChipClick(action: string) {
-    if (action === "generate") await handleGenerate();
-    else if (action === "run")  await handleRun();
-  }
+  if (!ready) return null;
 
   return (
-    <ResizableShell
-      sidebarOpen={sidebarOpen}
-      onToggleSidebar={() => setSidebarOpen((o) => !o)}
-      defaultLeftWidth={380}
-      minLeft={260}
-      maxLeft={580}
-      left={
-        <ChatSidebar
-          messages={messages}
-          onSend={onUserSend}
-          onChipClick={onChipClick}
+    <div style={{ display: "flex", flexDirection: "column", height: "100dvh", overflow: "hidden" }}>
+      <TopBar activeContact={activeContact} />
+
+      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+        <div style={{ width: `${sidebarWidth}px`, flexShrink: 0, height: "100%", overflow: "hidden", borderRight: "1px solid var(--border)" }}>
+          <ContactsSidebar
+            contacts={contacts}
+            histories={histories}
+            activeId={activeId}
+            onSelect={handleSelect}
+            onAdd={handleAdd}
+            onDelete={handleDelete}
+          />
+        </div>
+
+        <div className="resize-handle" onMouseDown={startDrag} title="Drag to resize" />
+
+        <ChatPane
+          contact={activeContact}
+          messages={activeMessages}
           loading={loading}
-          config={cfg}
-          onConfigChange={setCfg}
+          onSend={handleSend}
+          onChipClick={handleChip}
         />
-      }
-      right={
-        <ReportPane
-          query={query}
-          result={result}
-          configForSave={agentConfig}
-          sidebarOpen={sidebarOpen}
-          onToggleSidebar={() => setSidebarOpen((o) => !o)}
-        />
-      }
-    />
+      </div>
+    </div>
   );
 }

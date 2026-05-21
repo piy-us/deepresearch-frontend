@@ -1,115 +1,384 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
-*, *::before, *::after { box-sizing: border-box; }
-
-:root {
-  --bg:              #0c0c0c;
-  --panel:           #111111;
-  --border:          #1e1e1e;
-  --msg-ai:          #161616;
-  --msg-ai-border:   #222222;
-  --msg-user:        #1c1c1c;
-  --msg-user-border: #282828;
-  --input-bg:        #161616;
-  --text:            #b0b0b0;
-  --text-dim:        #555555;
-  --text-dimmer:     #3a3a3a;
-  --text-bright:     #d0d0d0;
-  --label:           #3e3e3e;
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
-html, body, #__next { height: 100%; margin: 0; padding: 0; }
+:root {
+  /* ─────────────────────────────
+     BASE COLORS
+  ───────────────────────────── */
+  --bg:              #f3f6fa;
+  --panel:           #ffffff;
+  --panel-elevated:  #ffffff;
+
+  --border:          #d8e0ea;
+  --border-strong:   #c7d2df;
+
+  --input-bg:        #ffffff;
+  --input-border:    #ccd6e2;
+
+  --text:            #344054;
+  --text-dim:        #7b8794;
+  --text-muted:      #98a2b3;
+  --text-bright:     #101828;
+
+  /* ─────────────────────────────
+     PRIMARY ACCENT (Corporate Blue)
+  ───────────────────────────── */
+  --accent:          #4f8cff;
+  --accent-hover:    #3b82f6;
+
+  --accent-dim:      rgba(79, 140, 255, 0.08);
+  --accent-border:   rgba(79, 140, 255, 0.22);
+  --accent-glow:     rgba(79, 140, 255, 0.16);
+
+  /* ─────────────────────────────
+     CHAT COLORS
+  ───────────────────────────── */
+  --msg-ai:          #ffffff;
+  --msg-ai-border:   #dbe3ee;
+
+  --msg-user:        #4f8cff;
+  --msg-user-border: #3b82f6;
+
+  --sidebar-w:       280px;
+
+  /* ─────────────────────────────
+     SHADOWS
+  ───────────────────────────── */
+  --shadow-sm:
+    0 1px 2px rgba(16, 24, 40, 0.04);
+
+  --shadow-md:
+    0 4px 12px rgba(16, 24, 40, 0.06);
+
+  --shadow-lg:
+    0 10px 24px rgba(16, 24, 40, 0.08);
+}
+
+/* ─────────────────────────────
+   GLOBAL
+───────────────────────────── */
+html,
+body,
+#__next {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: 'IBM Plex Sans', sans-serif;
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Thin scrollbars ─────────────────────── */
-* { scrollbar-width: thin; scrollbar-color: #252525 transparent; }
-*::-webkit-scrollbar { width: 4px; height: 4px; }
-*::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: #252525; border-radius: 4px; }
-
-/* ── Loading dots animation ──────────────── */
-@keyframes dotPulse {
-  0%, 100% { opacity: 0.2; transform: scale(0.85); }
-  50%       { opacity: 1;   transform: scale(1);    }
+/* ─────────────────────────────
+   SCROLLBARS
+───────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
 }
 
-/* ── Chip hover ──────────────────────────── */
-.action-chip:hover { background: #222222 !important; border-color: #383838 !important; color: #cccccc !important; }
-
-/* ── Markdown in chat ────────────────────── */
-.chat-prose { font-size: 0.84rem; line-height: 1.6; color: var(--text); }
-.chat-prose p  { margin: 0 0 4px; }
-.chat-prose ul { margin: 4px 0 4px 18px; padding: 0; list-style: disc; }
-.chat-prose ol { margin: 4px 0 4px 18px; padding: 0; list-style: decimal; }
-.chat-prose li { margin-bottom: 2px; }
-.chat-prose strong { color: #c8c8c8; font-weight: 600; }
-.chat-prose code {
-  background: #1e1e1e;
-  border: 1px solid #2a2a2a;
-  border-radius: 3px;
-  padding: 1px 5px;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.8em;
-  color: #a8c8a8;
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
 }
 
-/* ── Report markdown ─────────────────────── */
-.report-prose { font-size: 0.875rem; line-height: 1.85; color: #a0a0a0; }
-.report-prose h1 {
-  color: #dddddd;
-  font-size: 1.22rem;
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+/* ─────────────────────────────
+   TOP NAVBAR
+───────────────────────────── */
+.topbar {
+  height: 64px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #1e293b 0%,
+      #243447 100%
+    );
+
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+
+  box-shadow:
+    0 2px 10px rgba(0,0,0,0.08);
+
+  backdrop-filter: blur(12px);
+}
+
+/* Optional logo text */
+.topbar-title {
+  color: #f8fafc;
   font-weight: 600;
-  border-bottom: 1px solid #1e1e1e;
-  padding-bottom: 8px;
-  margin: 0 0 16px;
+  letter-spacing: -0.02em;
 }
-.report-prose h2 { color: #c8c8c8; font-size: 1.0rem; font-weight: 600; margin-top: 20px; }
-.report-prose h3 { color: #aaaaaa; font-size: 0.9rem; font-weight: 600; margin-top: 14px; }
-.report-prose table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: 12px 0; }
-.report-prose th {
-  background: #161616;
-  color: #888;
-  padding: 7px 12px;
-  text-align: left;
-  border: 1px solid #222;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
+
+/* ─────────────────────────────
+   SIDEBAR
+───────────────────────────── */
+.sidebar {
+  background: rgba(255,255,255,0.82);
+
+  backdrop-filter: blur(14px);
+
+  border-right: 1px solid var(--border);
+
+  box-shadow:
+    inset -1px 0 0 rgba(255,255,255,0.6);
 }
-.report-prose td { padding: 7px 12px; border: 1px solid #1e1e1e; color: #999; vertical-align: top; }
-.report-prose tr:nth-child(even) td { background: #111; }
-.report-prose a { color: #6a9fd8; text-decoration: none; }
-.report-prose a:hover { text-decoration: underline; }
-.report-prose code {
-  background: #161616;
-  border: 1px solid #2a2a2a;
-  border-radius: 3px;
-  padding: 1px 5px;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.82em;
-  color: #a8c8a8;
+
+/* ─────────────────────────────
+   CARDS / PANELS
+───────────────────────────── */
+.panel,
+.card {
+  background: var(--panel);
+
+  border: 1px solid var(--border);
+
+  border-radius: 18px;
+
+  box-shadow: var(--shadow-sm);
 }
-.report-prose pre {
-  background: #0f0f0f;
-  border: 1px solid #1e1e1e;
-  border-radius: 6px;
-  padding: 14px;
-  overflow-x: auto;
-  margin: 12px 0;
+
+/* ─────────────────────────────
+   CLIENT LIST ITEM
+───────────────────────────── */
+.client-item {
+  border: 1px solid transparent;
+
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
 }
-.report-prose pre code { background: none; border: none; padding: 0; }
-.report-prose blockquote {
-  border-left: 2px solid #2a2a2a;
+
+.client-item:hover {
+  background: rgba(79, 140, 255, 0.05);
+
+  border-color: var(--accent-border);
+}
+
+.client-item.active {
+  background: rgba(79, 140, 255, 0.08);
+
+  border-color: rgba(79, 140, 255, 0.22);
+
+  box-shadow:
+    inset 0 0 0 1px rgba(79, 140, 255, 0.08);
+}
+
+/* ─────────────────────────────
+   CHAT BUBBLES
+───────────────────────────── */
+.ai-message {
+  background: var(--msg-ai);
+
+  border: 1px solid var(--msg-ai-border);
+
+  box-shadow: var(--shadow-sm);
+}
+
+.user-message {
+  background: var(--msg-user);
+
+  border: 1px solid var(--msg-user-border);
+
+  color: white;
+
+  box-shadow:
+    0 6px 16px rgba(79, 140, 255, 0.18);
+}
+
+/* ─────────────────────────────
+   CHAT PROSE
+───────────────────────────── */
+.chat-prose {
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.chat-prose p {
+  margin: 0 0 6px;
+}
+
+.chat-prose p:last-child {
   margin: 0;
-  padding-left: 14px;
-  color: #666;
 }
-.report-prose hr { border: none; border-top: 1px solid #1e1e1e; margin: 20px 0; }
+
+.chat-prose strong {
+  color: var(--text-bright);
+  font-weight: 600;
+}
+
+.chat-prose code {
+  background: #eef2f7;
+
+  border: 1px solid #d7dee8;
+
+  border-radius: 6px;
+
+  padding: 2px 6px;
+
+  font-family: 'IBM Plex Mono', monospace;
+
+  font-size: 0.82em;
+
+  color: #3563c8;
+}
+
+/* ─────────────────────────────
+   INPUT AREA
+───────────────────────────── */
+.chat-input-wrapper {
+  background: var(--input-bg);
+
+  border: 1px solid var(--input-border);
+
+  border-radius: 16px;
+
+  box-shadow:
+    0 1px 2px rgba(16,24,40,0.04);
+
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background 120ms ease;
+}
+
+.chat-input-wrapper:hover {
+  border-color: #b8c4d3;
+}
+
+.chat-input-wrapper:focus-within {
+  border-color: var(--accent);
+
+  background: #fff;
+
+  box-shadow:
+    0 0 0 4px var(--accent-glow),
+    0 8px 24px rgba(16,24,40,0.06);
+}
+
+/* Actual textarea/input */
+.chat-input {
+  color: var(--text-bright);
+}
+
+.chat-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ─────────────────────────────
+   ACTION CHIPS
+───────────────────────────── */
+.action-chip {
+  background: #ffffff;
+
+  border: 1px solid var(--border-strong);
+
+  color: var(--text);
+
+  border-radius: 999px;
+
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.action-chip:hover:not(:disabled) {
+  background: rgba(79, 140, 255, 0.06);
+
+  border-color: var(--accent);
+
+  color: var(--accent);
+
+  box-shadow:
+    0 0 0 3px rgba(79, 140, 255, 0.08);
+}
+
+/* ─────────────────────────────
+   BUTTONS
+───────────────────────────── */
+.primary-button {
+  background: var(--accent);
+
+  border: 1px solid var(--accent);
+
+  color: white;
+
+  box-shadow:
+    0 4px 14px rgba(79, 140, 255, 0.22);
+
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    background 120ms ease;
+}
+
+.primary-button:hover {
+  background: var(--accent-hover);
+
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 8px 20px rgba(79, 140, 255, 0.28);
+}
+
+/* ─────────────────────────────
+   RESIZE HANDLE
+───────────────────────────── */
+.resize-handle {
+  width: 4px;
+
+  flex-shrink: 0;
+
+  cursor: col-resize;
+
+  background: transparent;
+
+  transition: background 0.15s;
+
+  position: relative;
+
+  z-index: 10;
+}
+
+.resize-handle:hover,
+.resize-handle.dragging {
+  background: rgba(79, 140, 255, 0.15);
+}
+
+/* ─────────────────────────────
+   LOADING DOTS
+───────────────────────────── */
+@keyframes dotPulse {
+  0%, 100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
